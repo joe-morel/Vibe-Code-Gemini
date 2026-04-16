@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, SkipForward, SkipBack, Volume2, Gamepad2, Disc3, RefreshCw, Power } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 
 const GRID_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
@@ -98,7 +101,7 @@ export default function App() {
         const head = prev[0];
         const newHead = { x: head.x + dirRef.current.x, y: head.y + dirRef.current.y };
 
-        // Wrap around or Wall collision? For neon aesthetic, walls are deadly.
+        // Wall collision
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
           setGameOver(true);
           return prev;
@@ -146,8 +149,8 @@ export default function App() {
   }, [isPlaying, currentTrackIndex]);
 
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
+    if (audioRef.current && typeof volume === 'number' && Number.isFinite(volume)) {
+      audioRef.current.volume = Math.max(0, Math.min(1, volume));
     }
   }, [volume]);
 
@@ -166,14 +169,14 @@ export default function App() {
       boardCells.push(
         <div
           key={`${x}-${y}`}
-          className={`w-full h-full transition-all duration-75 flex items-center justify-center ${
+          className={`w-full h-full flex justify-center items-center rounded-sm transition-all duration-75 ${
             isHead
-              ? 'bg-[#00f2ff] shadow-[0_0_12px_#00f2ff] rounded-[2px] z-10 scale-110'
+              ? 'bg-primary z-10 scale-105'
               : isSnake
-              ? 'bg-[#00f2ff] shadow-[0_0_10px_#00f2ff] rounded-[2px] scale-95'
+              ? 'bg-primary/80'
               : isFood
-              ? 'bg-[#ff00ff] shadow-[0_0_15px_#ff00ff] rounded-full scale-[0.6] min-w-full min-h-full block animate-pulse'
-              : 'border border-white/[0.02]'
+              ? 'bg-destructive rounded-full scale-75 animate-pulse'
+              : 'border border-border/40'
           }`}
         />
       );
@@ -181,188 +184,198 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08080c] text-white font-sans flex flex-col items-center justify-center relative overflow-y-auto overflow-x-hidden selection:bg-[#ff00ff] selection:text-white">
-      {/* Background Grid Accent & Blobs */}
-      <div className="absolute top-[-200px] right-[-100px] w-[600px] h-[600px] rounded-full blur-[120px] opacity-35 bg-[#ff00ff] pointer-events-none fixed z-0" />
-      <div className="absolute bottom-[-200px] left-[-100px] w-[600px] h-[600px] rounded-full blur-[120px] opacity-35 bg-[#00f2ff] pointer-events-none fixed z-0" />
-      <div className="absolute inset-0 z-0 bg-transparent pointer-events-none fixed" />
-
-      {/* Main Container */}
-      <div className="z-10 w-full max-w-5xl flex flex-col md:flex-row gap-8 p-4 xl:p-0 my-8 items-start justify-center">
+    <div className="min-h-screen bg-muted/40 text-foreground flex items-center justify-center p-4 selection:bg-primary/20">
+      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-6">
         
         {/* Left Panel: Music Player */}
-        <div className="w-full md:w-80 bg-[rgba(255,255,255,0.03)] backdrop-blur-[25px] border border-[rgba(255,255,255,0.1)] p-6 rounded-[20px] flex flex-col shrink-0">
-          <div className="flex items-center space-x-3 mb-6">
-            <motion.div 
-               animate={{ rotate: isPlaying ? 360 : 0 }} 
-               transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-               className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00f2ff] to-[#ff00ff] flex items-center justify-center"
-            >
-              <Disc3 className="w-5 h-5 text-white" />
-            </motion.div>
-            <h2 className="text-lg font-extrabold tracking-tight text-white uppercase">Neon Rhythm</h2>
-          </div>
-
-          <div className="bg-[rgba(255,255,255,0.07)] border border-[rgba(0,242,255,0.3)] p-4 rounded-xl mb-6 relative overflow-hidden backdrop-blur-sm">
-            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[#00f2ff]/50 to-transparent" />
-            <p className="text-[10px] text-[#8e9297] mb-1 uppercase tracking-widest font-bold">Now Playing</p>
-            <p className="text-sm text-white font-bold truncate">
+        <Card className="w-full md:w-80 shrink-0 flex flex-col shadow-lg border-border/60">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <motion.div 
+                 animate={{ rotate: isPlaying ? 360 : 0 }} 
+                 transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+              >
+                <Disc3 className="w-5 h-5 text-primary" />
+              </motion.div>
+              Music Player
+            </CardTitle>
+            <CardDescription className="uppercase tracking-widest text-xs mt-2 font-medium">
+              Now Playing
+            </CardDescription>
+            <p className="font-semibold text-lg truncate mb-2">
               {TRACKS[currentTrackIndex].title}
             </p>
-            {/* Visualizer bars mock */}
-            <div className="flex items-end h-8 space-x-1 mt-4">
-              {[...Array(12)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  animate={isPlaying ? { height: ['20%', '100%', '30%', '80%', '20%'] } : { height: '20%' }}
-                  transition={{ 
-                    repeat: Infinity, 
-                    duration: 0.8 + Math.random(), 
-                    times: [0, 0.2, 0.5, 0.8, 1],
-                    ease: "easeInOut" 
-                  }}
-                  className="w-full bg-[#00f2ff]/80 rounded-t-sm"
-                />
-              ))}
+            
+            {/* Visualizer Album Art Placeholder */}
+            <div className="w-full aspect-square bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-lg mt-2 shadow-inner flex items-center justify-center relative overflow-hidden">
+              {isPlaying ? (
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] flex items-center justify-center gap-1.5">
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div
+                       key={i}
+                       animate={{ height: ['20%', '80%', '20%'] }}
+                       transition={{ repeat: Infinity, duration: 0.6 + Math.random(), ease: "easeInOut" }}
+                       className="w-2.5 bg-white/90 rounded-full"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                   <Disc3 className="w-8 h-8 text-white opacity-80 mix-blend-overlay" />
+                </div>
+              )}
             </div>
-          </div>
 
-          <div className="flex items-center justify-center gap-6 mb-8">
-            <button onClick={prevTrack} className="w-10 h-10 rounded-full transition text-[#00f2ff] opacity-70 hover:opacity-100 hover:drop-shadow-[0_0_10px_#00f2ff] flex items-center justify-center cursor-pointer border-none bg-transparent">
-              <SkipBack className="w-6 h-6" />
-            </button>
-            <button onClick={togglePlay} className="w-16 h-16 bg-[rgba(0,242,255,0.05)] border-2 border-[#00f2ff] text-[#00f2ff] rounded-full transition hover:scale-105 cursor-pointer flex items-center justify-center shadow-[0_0_20px_rgba(0,242,255,0.3)] hover:shadow-[0_0_30px_rgba(0,242,255,0.6)]">
-              {isPlaying ? <Pause className="w-8 h-8 fill-current drop-shadow-[0_0_8px_#00f2ff]" /> : <Play className="w-8 h-8 fill-current ml-1 drop-shadow-[0_0_8px_#00f2ff]" />}
-            </button>
-            <button onClick={nextTrack} className="w-10 h-10 rounded-full transition text-[#00f2ff] opacity-70 hover:opacity-100 hover:drop-shadow-[0_0_10px_#00f2ff] flex items-center justify-center cursor-pointer border-none bg-transparent">
-              <SkipForward className="w-6 h-6" />
-            </button>
-          </div>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col items-center justify-start gap-6 py-2">
+            <div className="flex items-center justify-center gap-4">
+              <Button variant="outline" size="icon" onClick={prevTrack} className="rounded-full">
+                <SkipBack className="w-4 h-4" />
+              </Button>
+              <Button size="icon" onClick={togglePlay} className="h-16 w-16 rounded-full shadow-md">
+                {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+              </Button>
+              <Button variant="outline" size="icon" onClick={nextTrack} className="rounded-full">
+                <SkipForward className="w-4 h-4" />
+              </Button>
+            </div>
 
-          <div className="flex items-center space-x-3 text-[#8e9297]">
-            <Volume2 className="w-5 h-5 shrink-0" />
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="w-full accent-white h-1 bg-white/10 rounded-full appearance-none outline-none cursor-pointer"
-            />
-          </div>
+            <div className="flex items-center space-x-3 w-full max-w-xs px-2">
+              <Volume2 className="w-4 h-4 text-muted-foreground" />
+              <Slider
+                value={[typeof volume === 'number' && Number.isFinite(volume) ? volume : 0.5]}
+                max={1}
+                step={0.01}
+                onValueChange={(val) => {
+                  if (val && val.length > 0 && typeof val[0] === 'number') {
+                    setVolume(val[0]);
+                  }
+                }}
+                className="w-full cursor-pointer"
+              />
+            </div>
+            
+            {/* Up Next Tracks Reference Block */}
+            <div className="w-full mt-2 pt-6 border-t border-border/60">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-1">Up Next</h4>
+              <div className="flex flex-col gap-1 w-full">
+                {TRACKS.map((track, idx) => (
+                  <button 
+                    key={track.id} 
+                    onClick={() => setCurrentTrackIndex(idx)}
+                    className={`flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-md transition-colors ${idx === currentTrackIndex ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted text-muted-foreground'}`}
+                  >
+                    <span className="text-[10px] font-mono opacity-50 w-4">{String(idx + 1).padStart(2, '0')}</span>
+                    <span className="text-sm truncate flex-1">{track.title}</span>
+                    {idx === currentTrackIndex && <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </CardContent>
 
           <audio 
              ref={audioRef} 
              src={TRACKS[currentTrackIndex].url}
              onEnded={nextTrack}
           />
-
-          <div className="mt-8 pt-6 border-t border-[rgba(255,255,255,0.1)] text-xs text-[#8e9297] space-y-2">
-            <p className="flex justify-between"><span>SYS:</span> <span className="text-white/[0.8]">ONLINE</span></p>
-            <p className="flex justify-between"><span>AI_MUSIC:</span> <span className="text-[#00f2ff] font-bold shadow-[#00f2ff]">GENERATING</span></p>
-          </div>
-        </div>
+        </Card>
 
         {/* Right Panel: Game Board */}
-        <div className="flex-1 w-full max-w-xl bg-[rgba(255,255,255,0.03)] backdrop-blur-[25px] border border-[rgba(255,255,255,0.1)] rounded-[20px] p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-2">
-              <Gamepad2 className="w-6 h-6 text-white" />
-              <h1 className="text-xl font-bold tracking-tight text-white">Cyber Snake</h1>
-            </div>
-            <div className="flex items-center space-x-8 text-sm">
+        <Card className="flex-1 w-full flex flex-col min-h-[500px] shadow-lg border-border/60">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/60">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Gamepad2 className="w-5 h-5 text-primary" /> Snake
+            </CardTitle>
+            <div className="flex items-center gap-6">
               <div className="flex flex-col items-end">
-                <span className="text-[#8e9297] text-[10px] uppercase tracking-widest mb-1">Score</span>
-                <span 
-                  className="text-4xl md:text-5xl font-bold font-digital text-[#00f2ff] leading-none glitch-text drop-shadow-[0_0_8px_rgba(0,242,255,0.6)]"
-                  data-text={score.toString().padStart(4, '0')}
+                <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">Score</span>
+                <motion.span 
+                  key={score}
+                  initial={{ scale: 1.3, color: 'hsl(var(--primary))' }}
+                  animate={{ scale: 1, color: 'inherit' }}
+                  transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                  className="text-3xl font-black font-mono tracking-tighter tabular-nums leading-none"
                 >
                   {score.toString().padStart(4, '0')}
-                </span>
+                </motion.span>
               </div>
-              <div className="flex flex-col items-end">
-                <span className="text-[#8e9297] text-[10px] uppercase tracking-widest mb-1">Best</span>
-                <span 
-                  className="text-3xl md:text-4xl font-bold font-digital text-[#ff00ff] leading-none glitch-text drop-shadow-[0_0_8px_rgba(255,0,255,0.6)]"
-                  data-text={highScore.toString().padStart(4, '0')}
-                >
-                  {highScore.toString().padStart(4, '0')}
+              <div className="flex flex-col items-end opacity-60">
+                <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">Best</span>
+                <span className="text-2xl font-bold font-mono tracking-tighter tabular-nums leading-none">
+                   {highScore.toString().padStart(4, '0')}
                 </span>
               </div>
             </div>
-          </div>
+          </CardHeader>
+          
+          <CardContent className="flex-1 p-6 flex flex-col items-center justify-center relative">
+            <div className="relative aspect-square w-full max-w-[450px] bg-muted/30 border rounded-md overflow-hidden box-content flex items-center justify-center">
+              {/* Game Grid */}
+              <div 
+                 className="absolute inset-0 grid bg-card" 
+                 style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
+              >
+                {boardCells}
+              </div>
 
-          <div className="relative aspect-square w-full max-w-[500px] mx-auto bg-black/30 bg-[radial-gradient(circle_at_center,rgba(0,242,255,0.05),transparent)] border border-white/10 rounded-xl overflow-hidden box-content flex items-center justify-center shadow-lg">
-            {/* Game Grid */}
-            <div 
-               className="absolute inset-0 grid" 
-               style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))` }}
-            >
-              {boardCells}
+              {/* Overlays */}
+              <AnimatePresence>
+                {!gameStarted && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[2px] z-20"
+                  >
+                    <Power className="w-12 h-12 text-muted-foreground mb-4" />
+                    <Button onClick={resetGame} size="lg" className="font-bold uppercase tracking-wider">
+                      Start Game
+                    </Button>
+                    <p className="mt-4 text-xs text-muted-foreground font-medium uppercase tracking-wider">Use Arrow Keys</p>
+                  </motion.div>
+                )}
+
+                {gameOver && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-destructive z-20"
+                  >
+                    <h2 className="text-4xl font-black text-destructive-foreground tracking-tight mb-2 uppercase">Game Over</h2>
+                    <p className="mb-6 font-bold text-destructive-foreground/90 text-lg">Final Score: {score}</p>
+                    <Button onClick={resetGame} variant="secondary" size="lg" className="gap-2 font-bold shadow-xl hover:scale-105 transition-transform">
+                      <RefreshCw className="w-4 h-4" />
+                      Try Again
+                    </Button>
+                  </motion.div>
+                )}
+
+                {isPaused && !gameOver && gameStarted && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm z-20"
+                  >
+                    <div className="text-2xl font-bold tracking-widest uppercase mb-2">Paused</div>
+                    <p className="text-sm text-muted-foreground">Press SPACE to resume</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Overlays */}
-            <AnimatePresence>
-              {!gameStarted && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-20"
-                >
-                  <Power className="w-16 h-16 text-[#00f2ff] mb-6 opacity-80 drop-shadow-[0_0_10px_rgba(0,242,255,0.8)]" />
-                  <button 
-                    onClick={resetGame}
-                    className="cursor-pointer px-8 py-3 bg-[rgba(255,255,255,0.05)] border border-[rgba(0,242,255,0.5)] rounded-full text-white hover:bg-[#00f2ff] hover:text-[#08080c] hover:border-[#00f2ff] font-bold uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(0,242,255,0.2)] hover:shadow-[0_0_25px_rgba(0,242,255,0.6)]"
-                  >
-                    Insert Coin
-                  </button>
-                  <p className="mt-4 text-xs text-[#8e9297]">Use Arrow Keys to Move</p>
-                </motion.div>
-              )}
-
-              {gameOver && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/40 backdrop-blur-md z-20 border border-red-500/50 shadow-[inset_0_0_50px_rgba(255,0,0,0.2)]"
-                >
-                  <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2 uppercase tracking-[0.2em] animate-pulse drop-shadow-[0_0_10px_rgba(255,0,0,0.8)] text-center">System Failure</h2>
-                  <p className="mb-8 text-white/80 font-mono">Final Score: {score}</p>
-                  <button 
-                    onClick={resetGame}
-                    className="cursor-pointer flex items-center space-x-2 px-6 py-3 bg-[rgba(255,255,255,0.05)] border border-red-500 rounded-full text-white hover:bg-white hover:text-red-900 hover:border-white uppercase tracking-wider transition-all shadow-[0_0_10px_rgba(255,0,0,0.3)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Reboot</span>
-                  </button>
-                </motion.div>
-              )}
-
-              {isPaused && !gameOver && gameStarted && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-md z-20"
-                >
-                  <div className="text-2xl font-bold text-[#00f2ff] uppercase tracking-[0.3em] drop-shadow-[0_0_10px_#00f2ff]">Paused</div>
-                  <p className="mt-2 text-xs text-[#8e9297]">Press SPACE to resume</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Mobile Controls mapping */}
-          <div className="grid grid-cols-3 gap-2 max-w-[200px] mx-auto mt-6 md:hidden pb-4">
-             <div />
-             <button aria-label="Up" className="h-12 bg-white/5 border border-white/10 rounded-lg active:bg-white/10 focus:bg-white/10 transition-colors flex items-center justify-center text-white/50 active:text-white shadow-lg backdrop-blur-sm" onClick={() => { if(dirRef.current.y === 0) setDirection({x:0, y:-1})}}>▲</button>
-             <div />
-             <button aria-label="Left" className="h-12 bg-white/5 border border-white/10 rounded-lg active:bg-white/10 focus:bg-white/10 transition-colors flex items-center justify-center text-white/50 active:text-white shadow-lg backdrop-blur-sm" onClick={() => { if(dirRef.current.x === 0) setDirection({x:-1, y:0})}}>◀</button>
-             <button aria-label="Down" className="h-12 bg-white/5 border border-white/10 rounded-lg active:bg-white/10 focus:bg-white/10 transition-colors flex items-center justify-center text-white/50 active:text-white shadow-lg backdrop-blur-sm" onClick={() => { if(dirRef.current.y === 0) setDirection({x:0, y:1})}}>▼</button>
-             <button aria-label="Right" className="h-12 bg-white/5 border border-white/10 rounded-lg active:bg-white/10 focus:bg-white/10 transition-colors flex items-center justify-center text-white/50 active:text-white shadow-lg backdrop-blur-sm" onClick={() => { if(dirRef.current.x === 0) setDirection({x:1, y:0})}}>▶</button>
-          </div>
-        </div>
+            {/* Mobile Controls mapping */}
+            <div className="grid grid-cols-3 gap-2 w-[180px] mx-auto mt-6 md:hidden">
+               <div />
+               <Button variant="secondary" className="h-14 font-lg" onClick={() => { if(dirRef.current.y === 0) setDirection({x:0, y:-1})}}>▲</Button>
+               <div />
+               <Button variant="secondary" className="h-14 font-lg" onClick={() => { if(dirRef.current.x === 0) setDirection({x:-1, y:0})}}>◀</Button>
+               <Button variant="secondary" className="h-14 font-lg" onClick={() => { if(dirRef.current.y === 0) setDirection({x:0, y:1})}}>▼</Button>
+               <Button variant="secondary" className="h-14 font-lg" onClick={() => { if(dirRef.current.x === 0) setDirection({x:1, y:0})}}>▶</Button>
+            </div>
+          </CardContent>
+        </Card>
 
       </div>
     </div>
